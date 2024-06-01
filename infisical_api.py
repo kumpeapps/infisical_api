@@ -10,20 +10,29 @@ class infisical_api:  # pylint: disable=invalid-name
     def __init__(
         self,
         service_token: str,
-        infisical_url: str = "https://infisical.com",
+        infisical_url: str = "https://app.infisical.com",
+        workspace_id: str = "dynamic",
     ):
         self.service_token = service_token
         self.infisical_url = infisical_url
+        self.workspace_id = workspace_id
 
     def get_secret(
         self, secret_name: str, environment: str = "prod", path: str = "/"
     ) -> dict:  # pylint: disable=no-self-argument
         """Retrieve Secret"""
+        if self.service_token == "":
+            raise PermissionError("Please provide a valid service_token")
+
         try:
+            if self.workspace_id == "dynamic":
+                workspace_id = self.get_workspace_id()
+            else:
+                workspace_id = self.workspace_id
             response = requests.get(
                 url=f"{self.infisical_url}/api/v3/secrets/raw/{secret_name}",
                 params={
-                    "workspaceId": self.get_workspace_id(),
+                    "workspaceId": workspace_id,
                     "environment": environment,
                     "secretPath": path,
                 },
@@ -49,10 +58,12 @@ class infisical_api:  # pylint: disable=invalid-name
                 },
                 timeout=15,
             )
+            print(response)
             data = json.loads(response.text)
             return data["workspace"]
         except requests.exceptions.RequestException:
             print("Failed to get Workspace ID")
+
 
 class convert_to_dot_notation(dict):
     """
