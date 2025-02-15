@@ -1,7 +1,9 @@
 """Infisical REST API Client"""  # pylint: disable=invalid-name
 
+import sys
 import json
-import requests
+import requests # type: ignore
+from loguru import logger
 
 
 class infisical_api:  # pylint: disable=invalid-name
@@ -12,10 +14,13 @@ class infisical_api:  # pylint: disable=invalid-name
         service_token: str,
         infisical_url: str = "https://app.infisical.com",
         workspace_id: str = "dynamic",
+        log_level: str = "INFO",
     ):
         self.service_token = service_token
         self.infisical_url = infisical_url
         self.workspace_id = workspace_id
+        logger.remove()
+        logger.add(sys.stderr, level=log_level)
 
     def get_secret(
         self, secret_name: str, environment: str = "prod", path: str = "/"
@@ -42,6 +47,7 @@ class infisical_api:  # pylint: disable=invalid-name
                 timeout=15,
             )
             data = json.loads(response.text)
+            logger.debug(data)
             secret = data["secret"]
             return convert_to_dot_notation(secret)
         except requests.exceptions.RequestException:
@@ -49,8 +55,9 @@ class infisical_api:  # pylint: disable=invalid-name
 
     def get_workspace_id(self) -> str:
         """Get Workspace ID"""
-
+        logger.trace("Getting Workspace ID")
         try:
+            logger.trace("Getting Workspace ID-try")
             response = requests.get(
                 url=f"{self.infisical_url}/api/v2/service-token",
                 headers={
@@ -58,11 +65,14 @@ class infisical_api:  # pylint: disable=invalid-name
                 },
                 timeout=15,
             )
-            print(response)
+            logger.debug(response)
             data = json.loads(response.text)
+            logger.debug(data)
             return data["workspace"]
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            logger.error(e)
             print("Failed to get Workspace ID")
+            return ""
 
 
 class convert_to_dot_notation(dict):
